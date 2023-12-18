@@ -10,7 +10,7 @@ import (
 func TestGenerateTokenAndParseJwt(t *testing.T) {
 	username := "testuser"
 	// 生成 Token
-	token, err := jwt.GenerateToken(username)
+	token, err := jwt.GenerateToken(username, 0)
 	if err != nil {
 		t.Errorf("GenerateToken failed: %v", err)
 		return

@@ -38,8 +38,9 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		// 如果令牌有效，继续处理请求
+		CurrentAuthUserId = user.ID
 		c.Set("user", user)
-		println(user.Username + " is authorized\n")
+		println(user.Username+" is authorized\n", user.ID)
 		c.Next()
 	}
 }

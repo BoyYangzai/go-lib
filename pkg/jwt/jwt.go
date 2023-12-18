@@ -19,13 +19,17 @@ var (
 
 type User struct {
 	Username string `json:"username"`
+	ID       uint64 `json:"id"`
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(username string) (string, error) {
+var CurrentAuthUserId uint64
+
+func GenerateToken(username string, id uint64) (string, error) {
 	secretKey := getSecretKey()
 	claims := User{
 		Username: username,
+		ID:       id,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -38,10 +42,6 @@ func GenerateToken(username string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	tokenMutex.Lock()
-	userTokenMap[username] = token
-	tokenMutex.Unlock()
 
 	return token, nil
 }
@@ -72,7 +72,7 @@ func getSecretKey() string {
 	return secretKey
 }
 
-func Auth(c *gin.Context, isMatchedSuccess bool, username string) {
+func Auth(c *gin.Context, isMatchedSuccess bool, username string, id uint64) {
 	// login auth storage
 	isLoginAuthStorage, token := LoginAuthStorage(c)
 	if isLoginAuthStorage {
@@ -85,16 +85,13 @@ func Auth(c *gin.Context, isMatchedSuccess bool, username string) {
 
 	// normal login auth
 	if isMatchedSuccess {
-		token, err := GenerateToken(username)
+		token, err := GenerateToken(username, id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"msg": "generate token error",
 			})
 			return
 		}
-
-		// 失效之前的 Token
-		InvalidatePreviousTokens(username)
 
 		c.JSON(http.StatusOK, gin.H{
 			"msg":   "login success",
@@ -105,10 +102,4 @@ func Auth(c *gin.Context, isMatchedSuccess bool, username string) {
 			"msg": "email and password not match",
 		})
 	}
-}
-
-func InvalidatePreviousTokens(username string) {
-	tokenMutex.Lock()
-	delete(userTokenMap, username)
-	tokenMutex.Unlock()
 }
